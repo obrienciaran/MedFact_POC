@@ -32,7 +32,7 @@ Running the filter writes `reports/filter.csv`, one row per paper:
 
 Every column is documented in [`reports/README.md`](reports/README.md). Downstream training then
 keeps, down-weights, or drops papers based on that table. The filter can also draw an evidence
-graph as an optional visual aid over the same data (see [Visualization](#visualization-optional)),
+graph as an optional visual aid over the same data (see [Visualization](#-visualization-optional)),
 but the table is the product.
 
 <img width="1174" height="388" alt="Screenshot 2026-06-21 at 03 48 03" src="https://github.com/user-attachments/assets/57568d0c-4dd7-47e9-a5db-6f6889f573a9" />
@@ -53,7 +53,7 @@ For one paper the steps are:
 4. **Judge stance** — an LLM reads each candidate study's title and abstract and labels it as
    supporting, refuting, or neutral toward the claim.
 5. **Score** — weigh those labels by evidence tier into a per-claim verdict, then take the
-   paper's worst claim as the paper's verdict (see [How a paper is scored](#how-a-paper-is-scored)).
+   paper's worst claim as the paper's verdict (see [How a paper is scored](#-how-a-paper-is-scored)).
 
 ### 🔎 How evidence is found
 
