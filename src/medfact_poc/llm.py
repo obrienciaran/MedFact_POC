@@ -1,52 +1,46 @@
 """Provider-agnostic LLM access for the steps that need language understanding.
 
 Two steps in the filter need a model: claim extraction and stance judgement. Both go
-through the single ``LLMClient`` Protocol here so a provider is chosen in one place. The
-default ``stub`` client returns deterministic canned text, so the whole filter runs
-offline with no key and no cost. Real providers (Anthropic, OpenAI, Gemini) are lazily
+through the single ``LLMClient`` Protocol (see ``base.llm``) so a provider is chosen in one
+place. The default ``stub`` client returns deterministic canned text, so the whole filter
+runs offline with no key and no cost. Real providers (Anthropic, OpenAI, Gemini) are lazily
 imported only when selected, so none of them is a hard dependency.
 
 Select with ``MEDFACT_LLM_PROVIDER`` in {stub, anthropic, openai, gemini} and, for real
-providers, the matching API key env var. Model id overridable with ``MEDFACT_LLM_MODEL``.
+providers, the matching API key env var. The model id is overridable with
+``MEDFACT_LLM_MODEL``.
 """
 
 from __future__ import annotations
 
 import os
-from typing import Protocol
+import time
+
+from .base.llm import LLMClient
 
 # The real generative providers. A backend env value matching one of these pins the
-# provider; "stub" and "llm" do not. Single source of truth so adding a provider touches
-# one list (plus its client class and default model below).
+# provider, while "stub" and "llm" do not. Single source of truth, so adding a provider
+# touches one list plus its client class and default model below.
 PROVIDERS = ("anthropic", "openai", "gemini")
 
-# Default model id per provider. Anthropic uses the latest Claude; the others use a
-# current low-cost model so a trial run on a free or cheap tier is the path of least cost.
+# Default models use a current low-cost model for the lowest cost.
 _DEFAULT_MODELS = {
-    "anthropic": "claude-opus-4-8",
+    "anthropic": "claude-haiku-4-5",
     "openai": "gpt-4o-mini",
-    "gemini": "gemini-1.5-flash",
+    "gemini": "gemini-2.5-flash-lite",
 }
-
-
-class LLMClient(Protocol):
-    name: str
-
-    def complete(self, prompt: str, *, max_tokens: int = 512) -> str:
-        """Return the model's text response to a single user prompt."""
-        ...
 
 
 class StubLLM:
     """Offline placeholder that calls no LLM. Returns canned JSON so extraction and stance
-    can parse a well-formed response with no provider and no network. Not a real signal:
-    each caller falls back to its own deterministic heuristic when it gets this."""
+    can parse a well-formed response with no provider and no network. It is not a real
+    signal. Each caller falls back to its own deterministic heuristic when it gets this."""
 
     name = "stub"
 
     def complete(self, prompt: str, *, max_tokens: int = 512) -> str:
-        # The callers parse JSON out of the response; return an empty object so each
-        # caller falls back to its own deterministic heuristic rather than this client.
+        # The callers parse JSON out of the response. Return an empty object so each caller
+        # falls back to its own deterministic heuristic rather than this client.
         return "{}"
 
 
@@ -100,13 +94,28 @@ class GeminiLLM:
         self._client = genai.Client()
 
     def complete(self, prompt: str, *, max_tokens: int = 512) -> str:
-        resp = self._client.models.generate_content(model=self.model, contents=prompt)
-        return resp.text or ""
+        # The free tier rate-limits (429 / RESOURCE_EXHAUSTED) and the shared model can be
+        # transiently overloaded (503 UNAVAILABLE, 500/502/504). Both are temporary, so back
+        # off and retry rather than crash a long batch run; other errors are re-raised.
+        transient = ("429", "resource_exhausted", "rate limit", "503", "unavailable",
+                     "overloaded", "high demand", "500", "internal", "502", "504")
+        delay = 4.0
+        for attempt in range(7):
+            try:
+                resp = self._client.models.generate_content(model=self.model, contents=prompt)
+                return resp.text or ""
+            except Exception as exc:  # noqa: BLE001 - inspect message to classify transient errors
+                msg = str(exc).lower()
+                if attempt == 6 or not any(t in msg for t in transient):
+                    raise
+                time.sleep(delay)
+                delay = min(delay * 2, 60.0)
+        return ""
 
 
 def get_llm(provider: str | None = None) -> LLMClient:
-    """Build an LLM client. ``provider`` overrides ``MEDFACT_LLM_PROVIDER``; both default
-    to the offline stub."""
+    """Build an LLM client. ``provider`` overrides ``MEDFACT_LLM_PROVIDER``. Both default to
+    the offline stub."""
     provider = (provider or os.environ.get("MEDFACT_LLM_PROVIDER", "stub")).lower()
     if provider == "stub":
         return StubLLM()

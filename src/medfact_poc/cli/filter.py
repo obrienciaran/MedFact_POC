@@ -3,10 +3,10 @@
 Point it at a directory of PubMed/MEDLINE XML files and it writes a flat CSV (one row per
 paper: identifier, verdict, score, action, metadata) plus an interactive HTML graph.
 
-    medfact-filter --input data/pubmed_xml            # offline stub backends
+    medfact-filter --input data/pubmed_xml # offline stub backends
     MEDFACT_LLM_PROVIDER=gemini MEDFACT_EXTRACT_BACKEND=llm \
         MEDFACT_STANCE_BACKEND=llm MEDFACT_RETRIEVER=live \
-        medfact-filter --input data/pubmed_xml         # real backends
+        medfact-filter --input data/pubmed_xml # real backends
 
 Backends default to deterministic offline stubs, so a run needs no API key. Select real
 providers with MEDFACT_LLM_PROVIDER in {anthropic, openai, gemini} plus the matching key.
@@ -17,10 +17,10 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 
-from ..filtering.flat_report import write_flat_csv
-from ..filtering.ingest import load_dir
-from ..filtering.pipeline import run_filter
-from ..graph import FILTER_HOW_TO_READ, build_paper_graph_data, render_html
+from ..orchestration.pipeline import run_filter
+from ..reporting.flat_report import write_flat_csv
+from ..reporting.graph import FILTER_HOW_TO_READ, build_paper_graph_data, render_html
+from ..transformation.ingest import load_dir
 
 
 def main() -> None:
@@ -41,16 +41,16 @@ def main() -> None:
     csv_path = write_flat_csv(verdicts, args.out_csv)
     html_path = render_html(
         build_paper_graph_data(verdicts), args.out_html,
-        title="MedFact — Filter Results",
-        subtitle=("Each node is a PubMed paper coloured by its truthfulness verdict. Gold "
-                  "stars are works that refuted it; red edges mark refutations."),
+        title="MedFact Filter Results",
+        subtitle=("Each node is a PubMed paper coloured by its truthfulness verdict. Red dots and "
+                "edges mark works that refuted it; green dots and edges mark works that supported it."),
         how_to_read=FILTER_HOW_TO_READ,
     )
 
     actions = Counter(v.action.value for v in verdicts)
     print(f"Scored {len(verdicts)} papers: "
-          f"{actions.get('keep', 0)} keep, {actions.get('downweight', 0)} downweight, "
-          f"{actions.get('drop', 0)} drop")
+        f"{actions.get('keep', 0)} keep, {actions.get('downweight', 0)} downweight, "
+        f"{actions.get('drop', 0)} drop")
     print(f"CSV:   {csv_path}")
     print(f"Graph: {html_path}")
 

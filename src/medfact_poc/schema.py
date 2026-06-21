@@ -1,14 +1,12 @@
 """Pydantic models for the negative-evidence recall harness.
 
-The flow these model:
+The flow these model: a GoldEntry feeds retrieval, which produces Candidates. Each
+Candidate is judged by the stance step into a StanceLabel, and the per-claim outcome is
+summarized as a ClaimReport.
 
-    GoldEntry  ──(retrieval)──>  Candidate[]  ──(stance)──>  StanceLabel[]
-        └────────────────────────────────────────────────>  ClaimReport
-
-A ``GoldEntry`` is ground truth we hand-authored. A ``Candidate`` is one piece of
-evidence retrieval surfaced. A ``StanceLabel`` is how the stance step judged a
-candidate relative to the claim. A ``ClaimReport`` is the per-claim verdict the
-metrics layer consumes.
+A ``GoldEntry`` is ground truth we hand-authored. A ``Candidate`` is one piece of evidence
+retrieval surfaced. A ``StanceLabel`` is how the stance step judged a candidate relative to
+the claim. A ``ClaimReport`` is the per-claim verdict the metrics layer consumes.
 """
 
 from __future__ import annotations
@@ -113,7 +111,7 @@ class Candidate(BaseModel):
     abstract: str = ""
     pub_types: list[str] = Field(default_factory=list)  # e.g. "Meta-Analysis", "Guideline"
     year: int | None = None
-    # link relationships (PubMed ELink) — secondary contradiction signal
+    # link relationships (PubMed ELink), a secondary contradiction signal
     is_retraction_of: list[str] = Field(default_factory=list)
     retracted_by: list[str] = Field(default_factory=list)
     # retrieval provenance
@@ -123,12 +121,15 @@ class Candidate(BaseModel):
     def evidence_tier(self) -> float:
         """Coarse GRADE-flavored tier weight from publication types.
 
-        This is intentionally crude — it exists only so the harness can detect
-        *tier inversion* (low-tier support masking high-tier refutation). It is
-        NOT a scoring instrument and must not grow into one here.
+        This is intentionally crude. It exists only so the harness can detect
+        tier inversion (low-tier support masking high-tier refutation). It is not a
+        scoring instrument and must not grow into one here.
         """
         pt = {p.lower() for p in self.pub_types}
-        if "retraction of publication" in pt:
+        # PubMed labels the withdrawing notice "Retraction Notice" (and, on older records,
+        # "Retraction of Publication"). Match both so a retraction is never mistiered as a
+        # generic article.
+        if pt & {"retraction of publication", "retraction notice"}:
             return 0.95  # a retraction is the strongest refutation of the work it withdraws
         if pt & {"guideline", "practice guideline"}:
             return 1.0
@@ -177,8 +178,7 @@ class ClaimReport(BaseModel):
     false_contradiction: bool = False
 
 
-# --------------------------------------------------------------------- filter
-# The data filter (the project's end goal) scores whole PubMed papers, not just the
+# The data filter, the project's end goal, scores whole PubMed papers, not just the
 # hand-authored gold claims. These models carry that flow: a parsed paper, the claims
 # extracted from it, and the per-claim and per-paper verdicts written to the flat table.
 
@@ -249,6 +249,7 @@ class ClaimVerdict(BaseModel):
     verdict: Verdict
     score: float  # 0 (refuted) .. 1 (well supported)
     refuting_pmids: list[str] = Field(default_factory=list)
+    supporting_pmids: list[str] = Field(default_factory=list)
 
 
 class PaperVerdict(BaseModel):

@@ -1,6 +1,6 @@
 import math
 
-from medfact_poc.metrics import compute
+from medfact_poc.reporting.metrics import compute
 from medfact_poc.schema import ClaimReport, ClaimStatus, FailureBucket
 
 

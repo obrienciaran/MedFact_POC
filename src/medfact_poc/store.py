@@ -1,14 +1,25 @@
 """DuckDB-backed cache for the harness.
 
-Persists the expensive-to-fetch artifacts so a run can be repeated offline:
-  * ``candidates``        — fetched evidence records
-  * ``embeddings``        — per-candidate vectors (model-tagged)
-  * ``claim_retrieval``   — which candidates each claim's queries surfaced, per channel
-  * ``stance``            — per-claim stance verdict for each classified candidate
+The harness is the validation and testing arm of the project. It does not
+score papers for the end user. Instead it stress-tests the one dependency the filter's
+accuracy rests on - can the retrieval process surface the study that disproves a claim the field already
+knows was reversed? The harness runs that search over the curated gold slice (claims whose
+disproving study is recorded in advance) and reports recall, so we can show the filter works
+before trusting it on unseen papers.
 
-Run outputs (metrics, reports) are written to files by ``report.py``; only the
-reusable cache lives here. The stance table also feeds the graph visualization.
-Brute-force cosine at this scale, so no ANN/`vss` index.
+This module is the harness's cache. It persists the expensive-to-fetch artifacts so a run can
+be repeated offline and deterministically:
+  * ``candidates`` holds fetched evidence records.
+  * ``embeddings`` holds per-candidate vectors, tagged by model.
+  * ``claim_retrieval`` records which candidates each claim's queries surfaced, per channel.
+  * ``stance`` holds the per-claim stance verdict for each classified candidate.
+
+Run outputs (metrics, reports) are written to files by ``reporting.report``. Only the
+reusable cache lives here. The stance table also feeds the graph visualization. Cosine is
+brute-force at this scale, so there is no ANN or vss index.
+
+DuckDB is a declared dependency (see ``pyproject.toml``). If an editor flags the ``duckdb``
+import below as unresolved, point its Python interpreter at the project's uv virtualenv.
 """
 
 from __future__ import annotations
@@ -70,7 +81,7 @@ class Store:
             """
         )
 
-    # ---- candidates ----------------------------------------------------------
+    # Candidates
     def upsert_candidates(self, candidates: list[Candidate]) -> None:
         for c in candidates:
             self.con.execute(
@@ -102,7 +113,7 @@ class Store:
             "SELECT 1 FROM candidates WHERE ext_id = ?", [ext_id]
         ).fetchone() is not None
 
-    # ---- embeddings ----------------------------------------------------------
+    # Embeddings
     def upsert_embedding(self, ext_id: str, model: str, vector: list[float]) -> None:
         self.con.execute(
             "INSERT INTO embeddings VALUES (?,?,?) "
@@ -116,7 +127,7 @@ class Store:
         ).fetchone()
         return list(row[0]) if row else None
 
-    # ---- claim -> retrieved candidates --------------------------------------
+    # Claim to retrieved candidates
     def record_retrieval(
         self, claim_id: str, channel: str, ranked_ext_ids: list[tuple[str, float]]
     ) -> None:
@@ -138,7 +149,7 @@ class Store:
         ).fetchall()
         return [r[0] for r in rows]
 
-    # ---- stance --------------------------------------------------------------
+    # Stance
     def upsert_stance(self, labels: list[StanceLabel]) -> None:
         for s in labels:
             self.con.execute(

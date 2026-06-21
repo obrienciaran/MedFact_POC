@@ -1,19 +1,19 @@
 """Run the recall measurement and write a report.
 
-    medfact-run                 # live APIs + configured backends
-    medfact-run --use-cache     # offline, from a prior medfact-build-cache
+    medfact-run # live APIs + configured backends
+    medfact-run --use-cache # offline, from a prior medfact-build-cache
 """
 
 from __future__ import annotations
 
 import argparse
 
-from ..harness import GOLD_PATH, load_gold, run
-from ..metrics import compute
-from ..report import write_reports
-from ..retrieval import semantic
-from ..stance import get_stance_backend
+from ..orchestration.harness import GOLD_PATH, load_gold, run
+from ..reporting.metrics import compute
+from ..reporting.report import write_reports
 from ..store import DEFAULT_DB
+from ..transformation import semantic
+from ..transformation.stance import get_stance_backend
 
 
 def main() -> None:
@@ -35,8 +35,8 @@ def main() -> None:
         out_dir=args.out,
     )
     print(f"Retrieval recall: {metrics.retrieval_recall*100:.0f}%  "
-          f"(stance overall {metrics.stance_recall_overall*100:.0f}%, "
-          f"false-contradiction {metrics.false_contradiction_rate*100:.0f}%)")
+        f"(stance overall {metrics.stance_recall_overall*100:.0f}%, "
+        f"false-contradiction {metrics.false_contradiction_rate*100:.0f}%)")
     print(f"Report:  {md}")
     print(f"CSV:     {csv_path}")
 

@@ -1,4 +1,4 @@
-from medfact_poc.filtering.scoring import score_claim, score_paper
+from medfact_poc.transformation.scoring import score_claim, score_paper
 from medfact_poc.schema import (
     Action,
     Candidate,

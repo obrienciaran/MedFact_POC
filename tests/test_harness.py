@@ -1,7 +1,7 @@
 import pytest
 
-from medfact_poc import harness
-from medfact_poc.retrieval.semantic import StubEmbedder
+from medfact_poc.orchestration import harness
+from medfact_poc.transformation.semantic import StubEmbedder
 from medfact_poc.schema import (
     Candidate,
     ClaimStatus,
@@ -11,7 +11,7 @@ from medfact_poc.schema import (
     Stance,
     StanceLabel,
 )
-from medfact_poc.stance import StubStance
+from medfact_poc.transformation.stance import StubStance
 from medfact_poc.store import Store
 
 

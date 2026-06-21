@@ -2,15 +2,15 @@
 
 Run ``medfact-run`` first so the store holds stance results, then:
 
-    medfact-graph            # writes reports/graph.html
+    medfact-graph # writes reports/graph.html
 """
 
 from __future__ import annotations
 
 import argparse
 
-from ..graph import build_graph_data, render_html
-from ..harness import GOLD_PATH, load_gold
+from ..orchestration.harness import GOLD_PATH, load_gold
+from ..reporting.graph import build_graph_data, render_html
 from ..store import DEFAULT_DB, Store
 
 

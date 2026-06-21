@@ -6,7 +6,7 @@ Requires outbound HTTPS to NCBI E-utilities. Set NCBI_EMAIL to be polite.
 
 import pytest
 
-from medfact_poc.sources import pubmed
+from medfact_poc.scraping import pubmed
 
 pytestmark = pytest.mark.live
 

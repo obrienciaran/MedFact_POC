@@ -1,4 +1,4 @@
-from medfact_poc.retrieval import query
+from medfact_poc.transformation import query
 from medfact_poc.schema import NormalizedClaim
 
 

@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import argparse
 
-from ..harness import GOLD_PATH, embed_pool, load_gold, retrieve_pool
-from ..http import make_client
-from ..retrieval import semantic
-from ..sources.base import get_sources
+from ..orchestration.harness import GOLD_PATH, embed_pool, load_gold, retrieve_pool
+from ..scraping.http import make_client
+from ..scraping.sources import get_sources
 from ..store import DEFAULT_DB, Store
+from ..transformation import semantic
 
 
 def main() -> None:

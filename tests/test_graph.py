@@ -1,4 +1,4 @@
-from medfact_poc.graph import build_graph_data, render_html
+from medfact_poc.reporting.graph import build_graph_data, render_html
 from medfact_poc.schema import (
     Candidate,
     ClaimStatus,
