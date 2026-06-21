@@ -112,8 +112,10 @@ to the paper. The thresholds all live in `transformation/scoring.py`.
 1. **Weigh each study.** Every retrieved study carries an evidence tier set by its publication
    type (guideline 1.0, retraction 0.95, systematic review 0.9, meta-analysis 0.85, randomised
    trial 0.8, observational study 0.5, case report 0.2, anything else 0.4). A study's pull on
-   the claim is that tier multiplied by the model's stance confidence, so a high-tier study the
-   model is sure about moves the result far more than a weak or uncertain one.
+   the claim is that tier multiplied by the model's stance confidence — a 0 to 1 number the
+   model reports alongside its supports/refutes/neutral label, for how sure it is in that
+   judgement — so a high-tier study the model is sure about moves the result far more than a
+   weak or uncertain one.
 2. **Score the claim.** The claim takes its single strongest refuting pull and its single
    strongest supporting pull and turns them into a 0 to 1 truthfulness score: it starts at 0.5,
    supporting evidence raises it, and refuting evidence lowers it (refutation weighs about
