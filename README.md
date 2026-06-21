@@ -5,15 +5,12 @@
 A proof of concept for a **truth-based data quality filter for medical training
 data**. Point it at a corpus of PubMed medical papers in XML format and it produces a
 flat table, one row per paper, judging whether the paper's claims hold up against
-trusted medical evidence. Downstream training then keeps, down-weights, or drops each
+trusted medical evidence. Downstream training can then keep, down-weight, or drops each
 paper based on that table.
 
-The point is to filter on *truth*, not on surface features — and that is what sets it
-apart from every existing kind of quality filter, because all of them judge a paper by
+The point is to filter on *truth*, not on surface features. This is what sets this filter
+apart from existing quality filters. Existing papers judge a paper by
 how it looks rather than whether it is right:
-
-<img width="1501" height="776" alt="Screenshot 2026-06-21 at 03 45 19" src="https://github.com/user-attachments/assets/e221edca-404a-47de-abb0-a8157dade899" />
-
 
 - **Rule-based filters** check form such as length, punctuation, repetition, language. They
   strip out gibberish and spam, but well-formed false claims pass through.
@@ -26,6 +23,7 @@ how it looks rather than whether it is right:
 - **LLM rating** asks a language model how good or educational a passage looks. Models
   tend to reward fluency and coherence, which is exactly what confident misinformation imitates best.
 
+
 The shared blind spot is that each of these approahces answer "does this look trustworthy?"
 while none answers "is this true?" 
 
@@ -33,6 +31,8 @@ This filter does not score appearance at all. It pulls out each claim and checks
 against the evidence, asking whether the research backs it up or contradicts it, and the
 verdict is *discovered* from that evidence, not guessed from how the paper reads. What
 exposes a wrong paper is the contradicting evidence itself.
+
+<img width="1501" height="776" alt="Screenshot 2026-06-21 at 03 45 19" src="https://github.com/user-attachments/assets/e221edca-404a-47de-abb0-a8157dade899" />
 
 This is a POC. It runs on a small curated slice and tests the one dependency the
 whole proposed approach rests on. That is to check if the filter has the ability to *find* the evidence that contradicts a
