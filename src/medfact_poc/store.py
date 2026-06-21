@@ -15,8 +15,9 @@ be repeated offline and deterministically:
   * ``stance`` holds the per-claim stance verdict for each classified candidate.
 
 Run outputs (metrics, reports) are written to files by ``reporting.report``. Only the
-reusable cache lives here. The stance table also feeds the graph visualization. Cosine is
-brute-force at this scale, so there is no ANN or vss index.
+reusable cache lives here. The stance table also feeds the graph visualization. Similarity
+is computed by comparing every row directly, not through a separate search index, since
+the candidate pools are still small enough for that to be fast.
 
 DuckDB is a declared dependency (see ``pyproject.toml``). If an editor flags the ``duckdb``
 import below as unresolved, point its Python interpreter at the project's uv virtualenv.

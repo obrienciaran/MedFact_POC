@@ -91,7 +91,7 @@ measuring (retrieval recall), because a boolean query that misses the right term
 project's central failure mode.** When a query fails the tags it `entity_miss` (the
 query missed the claim's terms) or `not_indexed` (no query or source returned the study). This
 is **not** a vector search over all of PubMed; no such index exists here. Embeddings and cosine
-similarity (`transformation/semantic.py`) appear only in the *harness*, where they re-rank an
+similarity (`transformation/semantic.py`) appear only in the *validation test*, where they re-rank an
 already-fetched pool to measure how near the top the disproving study lands (recall@k).
 Re-ranking cannot recover a study the API queries never returned.
 
@@ -102,11 +102,13 @@ The expense is dominated by network calls (PubMed/Europe PMC search and fetch) a
 concurrently (`MEDFACT_FILTER_CONCURRENCY`, default 4). The whole pipeline also runs offline on
 stub backends with no network and no LLM, for checking the plumbing before spending anything.
 
-> **Status: this is a proof of concept, not a finished filter.** The goal is a truth-based data
-> quality filter for medical training data. Again, this is a POC. The code here demonstrates that the approach is
-> viable on a small curated slice; it has not been tuned or validated at scale, and the query
-> construction, retrieval, and scoring all need further refinement before production use. Treat
-> every result as an early capability demonstration, not a reliable data filtering tool.
+> **Status: this is a proof of concept (POC) for a data filter, not a finished product.** The
+> goal is a truth-based data quality filter for medical training data. As an early test, the
+> filter was run on a small batch of just 10 PubMed papers using Google's Gemini 2.5 Flash Lite
+> model. It has **not** been tested on a large or varied dataset of PubMed XML files, and the
+> query construction, retrieval, and scoring all need further refinement before any production
+> use. Treat every result here as an early demonstration of the idea, not a reliable data
+> filtering tool yet.
 
 ## Doesn't this exist already?
 
@@ -161,7 +163,7 @@ looser cutoff than the default actions.
 
 The filter is only as good as its search. If the search cannot find the study that contradicts
 a wrong claim, the filter cannot catch that claim. Everything rests on this one step, so a
-harness (`medfact-run`) tests it on its own.
+separate validation test (`medfact-run`) checks it on its own.
 
 The test is simple. We take a set of claims the field already knows were wrong, where the study
 that disproved each one is written down in advance. We run the filter's search over those
@@ -169,7 +171,9 @@ claims and check how often it brings the known disproving study back. This is th
 concept: a small, hand-curated check that the search works on cases where we already know the
 answer.
 
-> Oncemore, this is an experimental proof-of-concept project. It has not been run on a wider dataset.
+> Again, this is a proof-of-concept test for the data filter, not a full validation. It has only
+> been run on this small curated slice (the 10-paper Gemini 2.5 Flash Lite test mentioned above),
+> not on a wide or varied dataset of PubMed papers.
 
 The search runs in two steps, and scores each step separately so that when
 something goes wrong you can tell which step broke:
@@ -179,7 +183,7 @@ something goes wrong you can tell which step broke:
 
 Each score is a *recall*: of the studies that should have been found, the fraction that
 actually were. Every claim counts as a pass or a fail, and the recall is the percentage that
-pass. The harness reports four:
+pass. The validation test reports four:
 
 - **Retrieval recall** scores the fetch step: of the disproving studies we know exist, the
   fraction the search pulled back. It is checked against the written answer key, so it does not
@@ -195,7 +199,7 @@ pass. The harness reports four:
   fraction the search wrongly flagged as refuted. A filter that flags everything is useless, so
   lower is better.
 
-When a claim fails, the harness also tags *why*, so a miss can be traced to a root cause:
+When a claim fails, the validation test also tags *why*, so a miss can be traced to a root cause:
 
 - `not_indexed`: the disproving study was never fetched by any query or source.
 - `entity_miss`: the query missed the claim's terms, so almost nothing came back.
@@ -254,7 +258,7 @@ open to view a run:
 
 Two other HTML files in `reports/` are *not* a filter run and are easy to mistake for one:
 `reports/graph_demo.html` is a prebuilt static example shipped with the repo, and
-`reports/graph.html` is the **harness** visualization (written by `medfact-graph`), not the
+`reports/graph.html` is the **validation** visualization (written by `medfact-graph`), not the
 filter. Only `reports/filter.html` and `reports/filter.csv` come from `medfact-filter`.
 
 The input is PubMed/MEDLINE XML because that format carries the `CommentsCorrectionsList`
@@ -270,10 +274,26 @@ filter also queries Europe PMC as a second evidence source. That is retrieval, n
 
 ```bash
 medfact-build-cache      # fetch candidate evidence for the gold set into DuckDB
-medfact-run              # run the measurement, write report to ./reports/
+medfact-run --use-cache  # read that cache instead of re-fetching live, write report to ./reports/
 medfact-graph            # render the evidence graph to reports/graph.html
 pytest                   # unit tests (network tests are opt-in: pytest -m live)
 ```
+
+`medfact-build-cache` always queries the live PubMed/Europe PMC APIs (no API key needed for
+retrieval itself). `medfact-run` can also be run with no `--use-cache` flag, which re-fetches
+the same evidence live instead of reading the cache; that works too, just slower.
+
+By default `medfact-run` scores with stub embeddings and a stub (lexical) stance check, so it
+runs offline with no API key. For a real measurement, set real backends the same way as the
+filter:
+
+```bash
+MEDFACT_EMBED_BACKEND=sbert MEDFACT_STANCE_BACKEND=llm MEDFACT_LLM_PROVIDER=gemini \
+  medfact-run --use-cache
+```
+
+`MEDFACT_EMBED_BACKEND=sbert` needs the `embed` extra installed (see Setup); without it the
+recall numbers come from the stub backends and are not a real measurement.
 
 ## Visualization (optional)
 

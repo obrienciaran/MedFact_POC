@@ -4,10 +4,10 @@ This folder holds the artifacts the tools write. Nothing here is hand-edited.
 
 - `filter.csv` / `filter.html` — the **filter** output (`medfact-filter`): one row per paper
   with its truthfulness verdict, plus the same data as an interactive graph.
-- `recall-<timestamp>.md` / `recall-<timestamp>.csv` — the **harness** output
+- `recall-<timestamp>.md` / `recall-<timestamp>.csv` — the **validation** output
   (`medfact-run`): how often the search found the known disproving evidence. These are
   validation metrics, not part of `filter.csv`; see the main `README.md`.
-- `graph.html` / `graph_demo.html` — the evidence graph for the harness run / a seeded demo.
+- `graph.html` / `graph_demo.html` — the evidence graph for the validation run / a seeded demo.
 
 ## `filter.csv` columns
 

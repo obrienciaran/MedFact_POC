@@ -14,11 +14,11 @@ Truth is discovered by checking each paper's XML file, then checking its claims 
 from surface features (fluency, formatting, citations) or hand-written rules.  Confident medical misinformation imitates those surface features well, so a classifier or rule-based filter rewards the wrong thing while this evidence-grounded approach does not. 
 
 Retrieval must be able to find the evidence that contradicts a wrong claim. If it cannot, we risk providing untruthful or
-false data to the training pipeline, which will increase the degree of hallucinations in medical AI models. This repository builds that filter, and includes a harness that measures this single dependency on a slice where we already know the answers, so we know the filter can work. The filter is the final product; the harness is simply the testing and scaffolding that validates it, and the graph/visualisation is a secondary aid.
+false data to the training pipeline, which will increase the degree of hallucinations in medical AI models. This repository builds that filter, and includes a validation tool (or "harness") that measures this single dependency on a slice where we already know the answers, so we know the filter can work. The filter is the final product; the validation tool is simply the testing and scaffolding that validates it, and the graph/visualisation is a secondary aid.
 
 We use an LLM in two bounded places; to extract the claim from a paper's text; and to judge whether a retrieved study supports or refutes it (unless we are in development mode and using generated data). The LLM does not run retrieval and does not decide the keep/drop verdict.
 
-The harness's core question is for medical claims the field already knows were reversed, can
+The validation tool's core question is for medical claims the field already knows were reversed, can
 the retrieval process surface the contradicting or superseding evidence? Its output is a recall number plus
 an error taxonomy showing where retrieval fails. The filter's output is the per-paper truthfulness table.
 
@@ -28,7 +28,7 @@ an error taxonomy showing where retrieval fails. The filter's output is the per-
 - The data filter (`medfact-filter`) is the product: ingest PubMed XML, extract claims, retrieve
   evidence, judge stance, aggregate to a per-paper verdict, and write a flat CSV plus an
   HTML graph. It runs fully on offline stubs and swaps in real backends via env.
-- The harness (`medfact-run`) is the validation arm: it measures retrieval recall on the
+- `medfact-run` is the validation arm: it measures retrieval recall on the
   consensus-reversal gold slice, the dependency the filter's accuracy rests on.
 - PubMed XML only. XML over .txt because it carries the
   CommentsCorrectionsList retraction/comment links, publication types, and MeSH.
@@ -60,9 +60,9 @@ runs per claim, then rolls up to the paper (`transformation/scoring.py`).
   contested down-weights it, supported or unverified keeps it. Unverified is kept on purpose,
   because absent refutation is not proof a claim is false.
 
-### Metrics (the harness's recall)
+### Metrics (the validation tool's recall)
 
-Each metric is a fraction over the gold claims. For every claim the harness records a pass or
+Each metric is a fraction over the gold claims. For every claim the validation tool records a pass or
 fail, then reports the percentage that pass.
 
 - Retrieval recall: fraction of reversed claims whose recorded disproving study landed in the
@@ -81,11 +81,11 @@ The package is organised by role. Base classes live in `base/`, network
 fetchers in `scraping/`, data changes in `transformation/`, and output in `reporting/`.
 
 Shared core:
-- `schema.py`: Pydantic models for both data filter, and the harness.
+- `schema.py`: Pydantic models for both data filter, and the validation tool.
 - `llm.py`: LLM clients (stub, Anthropic, OpenAI, Gemini), lazily
   imported. The single place a generative provider is chosen, used by stance and extract.
   The `LLMClient` Protocol lives in `base/llm.py`.
-- `store.py`: DuckDB cache for the harness (candidates, embeddings, claim_retrieval, stance).
+- `store.py`: DuckDB cache for the validation tool (candidates, embeddings, claim_retrieval, stance).
 
 `base/` holds the Protocols, one module per concept: `Source`, `Embedder`, `StanceBackend`,
 `ClaimExtractor`, `Retriever`, and `LLMClient`. Implementations live in their role folder and
@@ -107,7 +107,7 @@ classification behind `StanceBackend`, `classify_batch` runs calls concurrently,
 and `LLMStance`), and `scoring.py` (weighs stance into per-claim and per-paper verdicts, pure
 and tested).
 
-`reporting/` (output): `metrics.py` and `report.py` (harness aggregation, markdown plus CSV),
+`reporting/` (output): `metrics.py` and `report.py` (validation tool aggregation, markdown plus CSV),
 `flat_report.py` (the filter's flat CSV), and `graph.py` (`build_graph_data` and
 `build_paper_graph_data` are pure and tested, `render_html` writes a self-contained
 vis-network HTML file with a data-driven legend and summary, edge filters, and hover/click
@@ -126,10 +126,10 @@ read or that is not a PubMed article set, and it prints a highlight for a paper 
 
 Swappable plug points share the same Protocol shape: `Source`, `Embedder`, `StanceBackend`,
 `ClaimExtractor`, `Retriever`, and `LLMClient`. Each has a dependency-free stub (an offline
-placeholder that fakes the step with no LLM and no network) so the filter and harness run
+placeholder that fakes the step with no LLM and no network) so the filter and validation tool run
 offline, plus a real backend. Real runs need `MEDFACT_LLM_PROVIDER` in {anthropic, openai,
 gemini}, `MEDFACT_EXTRACT_BACKEND=llm`, `MEDFACT_STANCE_BACKEND=llm`, and
-`MEDFACT_RETRIEVER=live` (and `MEDFACT_EMBED_BACKEND=sbert` for the harness). Stub output is a
+`MEDFACT_RETRIEVER=live` (and `MEDFACT_EMBED_BACKEND=sbert` for the validation tool). Stub output is a
 placeholder, not a real result.
 
 ### Data
@@ -186,4 +186,4 @@ First consider clarity and simplicity. If architecture changes must be made to t
 - Use concurrency when processing data with an LLM API.
 - Read existing files before writing any output.
 - Do not re-read files unless they have been changed.
-- Avoid AI style language like the overuse of emdashes or semi-colons, or overuse of patterns like "not x, but y", or typical AI phrases like "honest review", "here's the catch", or "pragmatic approach".
+- Avoid AI style language like the overuse of emdashes or semi-colons, or overuse of patterns like "not x, but y" or "short label: longer explanation", or typical AI phrases like "honest review", "here's the catch", or "pragmatic approach".

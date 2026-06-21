@@ -81,10 +81,7 @@ class OpenAILLM:
 
 
 class GeminiLLM:
-    """Gemini via the google-genai SDK (lazy import, needs GEMINI_API_KEY).
-
-    Gemini has a free tier, so this is the intended first real backend for trialling.
-    """
+    """Gemini via the google-genai SDK (lazy import, needs GEMINI_API_KEY)."""
 
     def __init__(self, model: str) -> None:
         from google import genai  # lazy import
@@ -98,7 +95,7 @@ class GeminiLLM:
         # transiently overloaded (503 UNAVAILABLE, 500/502/504). Both are temporary, so back
         # off and retry rather than crash a long batch run; other errors are re-raised.
         transient = ("429", "resource_exhausted", "rate limit", "503", "unavailable",
-                     "overloaded", "high demand", "500", "internal", "502", "504")
+                    "overloaded", "high demand", "500", "internal", "502", "504")
         delay = 4.0
         for attempt in range(7):
             try:

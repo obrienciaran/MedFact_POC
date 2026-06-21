@@ -1,12 +1,13 @@
-"""Pydantic models for the negative-evidence recall harness.
+"""Pydantic models shared by the data filter and the validation tool.
 
-The flow these model: a GoldEntry feeds retrieval, which produces Candidates. Each
-Candidate is judged by the stance step into a StanceLabel, and the per-claim outcome is
-summarized as a ClaimReport.
+For the validation tool: a ``GoldEntry`` (a hand-authored claim we already know the
+answer for) feeds retrieval, which produces ``Candidate`` evidence. Each ``Candidate`` is
+judged by the stance step into a ``StanceLabel``, and the per-claim outcome is summarized
+as a ``ClaimReport``.
 
-A ``GoldEntry`` is ground truth we hand-authored. A ``Candidate`` is one piece of evidence
-retrieval surfaced. A ``StanceLabel`` is how the stance step judged a candidate relative to
-the claim. A ``ClaimReport`` is the per-claim verdict the metrics layer consumes.
+For the data filter: a ``PaperRecord`` (one ingested paper) has its claims lifted into
+``ExtractedClaim``s, each judged into a ``ClaimVerdict``, which roll up into one
+``PaperVerdict`` per paper.
 """
 
 from __future__ import annotations

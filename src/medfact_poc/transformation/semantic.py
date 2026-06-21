@@ -1,15 +1,34 @@
-"""Semantic ranking within a retrieved candidate pool.
+"""Sorts the studies a search already found, putting the most relevant ones first.
 
-Important scoping note: there is no local full-text corpus, so this channel does not
-perform dense retrieval over external literature. It re-ranks the pool that the keyword
-and source channels surfaced, by cosine similarity to the claim. It therefore measures the
-rankability of contradicting evidence given our queries. It cannot recover documents the
-API queries never returned, and that limitation is itself a finding the harness should
-surface (see the ``not_indexed`` bucket).
+An embedder is a model that turns a piece of text into a list of numbers that stands in
+for what the text means, so two texts with similar meaning end up with similar numbers
+even if they do not share the same words. This module embeds the claim and each
+retrieved study's title and abstract, then uses how close those numbers are to sort the
+studies from most to least relevant.
 
-The embedding backend is pluggable (see ``base.embedder``). The default ``stub`` backend
-is deterministic and dependency-free so the whole harness runs offline. Install the
-``embed`` extra and set ``MEDFACT_EMBED_BACKEND=sbert`` for real biomedical embeddings.
+This module does not search PubMed or Europe PMC itself. It only re-orders the pool of
+studies those searches already returned. If a study was never returned by the search in
+the first place, no amount of re-ordering can find it (see the ``not_indexed`` failure
+bucket).
+
+Why re-order at all? A claim's pool can hold hundreds of studies, and having a language
+model read every one to judge its stance would be slow and expensive. The validation tool
+(``orchestration.harness``) uses this ranking to pick the top ``STANCE_TOP_K`` (20 by
+default) studies to send to that stance step.
+
+In validation, the study already known to disprove each claim is always sent to the
+stance step regardless of where this module ranks it, so a bad ranking can never hide it
+from the headline recall numbers. The real filter has no such known answer for new
+papers, so a future ranking step there would need to be trustworthy on its own; the
+``recall@k`` metric (``reporting/metrics.py``) tracks how often the right study would
+have landed near the top.
+
+Two ranking backends are available (see ``base.embedder``):
+  * ``stub`` (the default) is fast, offline, and does not understand meaning, so its
+    order is close to random. It lets tests and offline runs work without a network
+    connection or a downloaded model.
+  * ``sbert`` is a real, pretrained biomedical language model. Turn it on with the
+    ``embed`` optional dependency and ``MEDFACT_EMBED_BACKEND=sbert``.
 """
 
 from __future__ import annotations
@@ -24,8 +43,9 @@ _STUB_DIM = 256
 
 
 class StubEmbedder:
-    """Deterministic hashing embedder. Not semantically meaningful. It exists so the
-    plumbing runs and tests are reproducible without network or model weights."""
+    """Fake, offline ranking based on word hashing. It does not understand meaning, so its
+    order is close to random. It exists so tests and offline runs work without a network
+    connection or a downloaded model."""
 
     name = "stub"
 
@@ -41,7 +61,8 @@ class StubEmbedder:
 
 
 class SentenceTransformerEmbedder:
-    """Real biomedical embeddings via sentence-transformers (optional dependency)."""
+    """Real ranking using a pretrained biomedical language model, via the
+    sentence-transformers package (an optional dependency)."""
 
     def __init__(self, model_name: str = "pritamdeka/S-PubMedBert-MS-MARCO") -> None:
         from sentence_transformers import SentenceTransformer  # lazy import

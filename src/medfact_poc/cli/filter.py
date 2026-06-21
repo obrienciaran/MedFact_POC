@@ -1,4 +1,4 @@
-"""Filter a lakehouse of PubMed XML for truthfulness.
+"""Filter a directory of PubMed XML files for truthfulness.
 
 Point it at a directory of PubMed/MEDLINE XML files and it writes a flat CSV (one row per
 paper: identifier, verdict, score, action, metadata) plus an interactive HTML graph.

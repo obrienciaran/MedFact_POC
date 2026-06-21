@@ -71,11 +71,21 @@ def retrieve_pool(
     sources = sources if sources is not None else get_sources()
     by_id: dict[str, Candidate] = {}
     for source in sources:
-        for c in source.search_claim(gold.normalized, limit=RETMAX_PER_QUERY, client=client):
+        try:
+            candidates = source.search_claim(gold.normalized, limit=RETMAX_PER_QUERY, client=client)
+        except Exception as exc:  # noqa: BLE001 - isolate one source's failure from the claim's pool
+            print(f"WARN: {source.name} failed for {gold.id}, skipping. {type(exc).__name__}: {exc}")
+            continue
+        for c in candidates:
             _merge(by_id, c, "keyword")
 
     # Secondary signal: pull retraction-linked PMIDs into the pool.
-    for c in links.expand_via_links(list(by_id.values()), client=client):
+    try:
+        linked = links.expand_via_links(list(by_id.values()), client=client)
+    except Exception as exc:  # noqa: BLE001 - isolate link expansion's failure from the claim's pool
+        print(f"WARN: link expansion failed for {gold.id}, skipping. {type(exc).__name__}: {exc}")
+        linked = []
+    for c in linked:
         _merge(by_id, c, "links")
 
     pool = list(by_id.values())

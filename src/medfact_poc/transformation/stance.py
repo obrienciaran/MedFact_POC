@@ -141,5 +141,17 @@ def classify_batch(
         return []
     workers = max_workers or int(os.environ.get("MEDFACT_STANCE_CONCURRENCY", "8"))
     workers = max(1, min(workers, len(candidates)))
+
+    def _classify(c: Candidate) -> StanceLabel:
+        try:
+            return backend.classify(gold, c)
+        except Exception as exc:  # noqa: BLE001 - isolate one candidate's failure from the batch
+            print(f"WARN: stance classify failed for {gold.id}/{c.ext_id}, treating as neutral. "
+                f"{type(exc).__name__}: {exc}")
+            return StanceLabel(
+                claim_id=gold.id, candidate_ext_id=c.ext_id, stance=Stance.NEUTRAL,
+                confidence=0.0, rationale=f"error: {type(exc).__name__}: {exc}", condition_match=None,
+            )
+
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        return list(executor.map(lambda c: backend.classify(gold, c), candidates))
+        return list(executor.map(_classify, candidates))

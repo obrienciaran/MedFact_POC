@@ -1,7 +1,7 @@
 [project]
 name = "medfact-poc"
 version = "0.1.0"
-description = "Negative-evidence recall measurement harness for medical claim factuality."
+description = "Negative-evidence recall measurement tool for medical claim factuality."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Heavier / optional backends. The harness and filter run without these using offline
+# Heavier / optional backends. The validation tool and filter run without these using offline
 # stubs. The graph renderer loads vis-network from a CDN, so it needs no Python dependency.
 embed = ["sentence-transformers>=3.0"]
 anthropic = ["anthropic>=0.40"]
