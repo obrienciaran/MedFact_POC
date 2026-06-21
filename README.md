@@ -53,7 +53,7 @@ Every column is documented in [`reports/README.md`](reports/README.md). Downstre
 keeps, down-weights, or drops papers from that table. The evidence graph the filter can also
 draw is an optional visual aid over the same data, not the product.
 
-<img width="1178" height="380" alt="Screenshot 2026-06-21 at 03 46 35" src="https://github.com/user-attachments/assets/bb9e0bf5-3250-40f8-b912-4ab5978d0dd4" />
+<img width="1174" height="388" alt="Screenshot 2026-06-21 at 03 48 03" src="https://github.com/user-attachments/assets/57568d0c-4dd7-47e9-a5db-6f6889f573a9" />
 
 ## How it works
 
