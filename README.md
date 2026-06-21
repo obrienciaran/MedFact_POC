@@ -1,4 +1,4 @@
-# MedFact_POC — Evidence-Grounded Truth Filter for Medical Papers
+# MedFact — Evidence-Grounded Data Quality Filter for Medical Papers
 
 ## 🎉 What this is
 
