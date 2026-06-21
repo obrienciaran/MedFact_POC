@@ -10,6 +10,7 @@ XML only. This source is queried to find studies that contradict or debate a cla
 
 from __future__ import annotations
 
+import json
 import time
 
 import httpx
@@ -17,6 +18,7 @@ import httpx
 from ..schema import Candidate, NormalizedClaim
 from ..transformation import query
 from .http import generic_throttle, make_client
+from .querycache import get_query_cache
 
 _SEARCH = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
 
@@ -37,7 +39,13 @@ class EuropePMCSource:
 
 
 def search(query: str, *, page_size: int = 50, client: httpx.Client | None = None) -> list[Candidate]:
-    """Search Europe PMC and return Candidates (abstracts included)."""
+    """Search Europe PMC and return Candidates (abstracts included).
+
+    Consults the query cache (when enabled) so a recurring query hits the network once.
+    """
+    cache = get_query_cache()
+    if cache is not None and (hit := cache.get("europepmc", query, page_size)) is not None:
+        return [Candidate.model_validate(d) for d in json.loads(hit)]
     own = client is None
     client = client or make_client()
     try:
@@ -59,7 +67,11 @@ def search(query: str, *, page_size: int = 50, client: httpx.Client | None = Non
                 continue
             break
         r.raise_for_status()
-        return parse_search_json(r.json())
+        candidates = parse_search_json(r.json())
+        if cache is not None:
+            cache.put("europepmc", query, page_size,
+                json.dumps([c.model_dump() for c in candidates]))
+        return candidates
     finally:
         if own:
             client.close()

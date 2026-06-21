@@ -12,6 +12,7 @@ handling.
 
 from __future__ import annotations
 
+import json
 import time
 import xml.etree.ElementTree as ET
 
@@ -20,6 +21,7 @@ import httpx
 from ..schema import Candidate, NormalizedClaim
 from ..transformation import medline, query
 from .http import make_client, ncbi_params, ncbi_throttle
+from .querycache import get_query_cache
 
 _EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
@@ -65,7 +67,13 @@ class PubMedSource:
 
 
 def esearch(query: str, *, retmax: int = 50, client: httpx.Client | None = None) -> list[str]:
-    """Return PMIDs matching ``query`` (most relevant first)."""
+    """Return PMIDs matching ``query`` (most relevant first).
+
+    Consults the query cache (when enabled) so a recurring query hits the network once.
+    """
+    cache = get_query_cache()
+    if cache is not None and (hit := cache.get("pubmed", query, retmax)) is not None:
+        return json.loads(hit)
     own = client is None
     client = client or make_client()
     try:
@@ -73,22 +81,62 @@ def esearch(query: str, *, retmax: int = 50, client: httpx.Client | None = None)
             {"db": "pubmed", "term": query, "retmax": str(retmax), "retmode": "json", "sort": "relevance"}
         )
         r = _ncbi_get(client, f"{_EUTILS}/esearch.fcgi", params)
-        return r.json().get("esearchresult", {}).get("idlist", [])
+        ids = r.json().get("esearchresult", {}).get("idlist", [])
+        if cache is not None:
+            cache.put("pubmed", query, retmax, json.dumps(ids))
+        return ids
     finally:
         if own:
             client.close()
 
 
+# Cap PMIDs per efetch so the request URL cannot overflow (NCBI returns 414 for long URLs).
+EFETCH_BATCH = 150
+
+
 def efetch(pmids: list[str], *, client: httpx.Client | None = None) -> list[Candidate]:
-    """Fetch full records for ``pmids`` and parse them into Candidates."""
+    """Fetch full records for ``pmids`` and parse them into Candidates.
+
+    Records already in the query cache (when enabled) are served from DuckDB, so a study fetched
+    once is never fetched again; only the missing ids hit the network. Results preserve the input
+    order.
+    """
+    if not pmids:
+        return []
+    cache = get_query_cache()
+    cached: dict[str, Candidate] = {}
+    to_fetch = list(pmids)
+    if cache is not None:
+        cached = {
+            ext_id: Candidate.model_validate_json(payload)
+            for ext_id, payload in cache.get_records(pmids).items()
+        }
+        to_fetch = [p for p in pmids if p not in cached]
+    fetched = _efetch_network(to_fetch, client=client)
+    if cache is not None and fetched:
+        cache.put_records({c.ext_id: c.model_dump_json() for c in fetched})
+    by_id = {**cached, **{c.ext_id: c for c in fetched}}
+    return [by_id[p] for p in pmids if p in by_id]
+
+
+def _efetch_network(pmids: list[str], *, client: httpx.Client | None = None) -> list[Candidate]:
+    """Fetch ``pmids`` from NCBI and parse them into Candidates (no cache).
+
+    Large pools are fetched in batches because all ids share one request URL, and a few
+    hundred ids overflow it (HTTP 414). Batching keeps each request well under the limit.
+    """
     if not pmids:
         return []
     own = client is None
     client = client or make_client()
     try:
-        params = ncbi_params({"db": "pubmed", "id": ",".join(pmids), "retmode": "xml"})
-        r = _ncbi_get(client, f"{_EUTILS}/efetch.fcgi", params)
-        return parse_efetch_xml(r.text)
+        out: list[Candidate] = []
+        for start in range(0, len(pmids), EFETCH_BATCH):
+            batch = pmids[start:start + EFETCH_BATCH]
+            params = ncbi_params({"db": "pubmed", "id": ",".join(batch), "retmode": "xml"})
+            r = _ncbi_get(client, f"{_EUTILS}/efetch.fcgi", params)
+            out.extend(parse_efetch_xml(r.text))
+        return out
     finally:
         if own:
             client.close()

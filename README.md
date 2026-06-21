@@ -67,30 +67,71 @@ The queries deliberately seek out contradicting, high-tier evidence, but whether
 not assumed. That is the exact thing this POC measures (retrieval recall), since a query that
 misses the right terms is the project's central failure mode. A miss is tagged `entity_miss` (the
 query missed the claim's terms) or `not_indexed` (no query or source returned the study). This is
-**not** a vector search over all of PubMed. Eembeddings and cosine similarity are used
-(`transformation/semantic.py`) only re-rank an already-fetched pool, in the validation test, to
+**not** a vector search over all of PubMed. Embeddings and cosine similarity are used
+(`transformation/semantic.py`) only to re-rank an already-fetched pool, in the validation test, to
 measure how near the top the disproving study lands (`recall@k`). Re-ranking cannot recover a
 study the queries never returned.
+
+### 🧱 Retrieval engine
+
+Retrieval is plain keyword search, tuned so a known refutation actually comes back, and built to
+stay cheap as the corpus grows. Three pieces matter (`transformation/query.py`,
+`scraping/pubmed.py`, `scraping/querycache.py`):
+
+- **Query ladder, not one rigid query.** Each claim becomes three PubMed rungs whose results are
+  unioned: a loose `core` rung (intervention + outcome), a `high-tier` rung that filters to the
+  publication types that overturn consensus (meta-analysis, systematic review, randomised trial,
+  guideline), and a contradiction-seeking rung (`risk`, `harm`, `no benefit`, ...). Europe PMC
+  mirrors the core and high-tier rungs. Terms are passed **unquoted** and stripped of parenthetical
+  annotations first, because quoting a long phrase forces an exact-string match that descriptive
+  claim text almost never satisfies. A per-rung contribution check on the gold slice set the rung
+  count: `core` and `high-tier` each recover every answer key a wider set did, so extra rungs were
+  dropped to keep the query count (and retrieval time) per claim low.
+- **Batched fetch.** A claim's unioned PMIDs are fetched in batches (`efetch`, 150 per request) so a
+  large pool cannot overflow the request URL (NCBI returns HTTP 414 for long URLs).
+- **Source resilience.** The two evidence sources are queried independently, so if one (say Europe
+  PMC) is temporarily down, the filter falls back to the other rather than failing the whole paper
+  to `unverified`.
+- **DuckDB query cache (opt-in).** Across a large corpus the same claim recurs constantly and
+  normalizes to the same search. With `MEDFACT_QUERY_CACHE` set to a file path (or `1` for the
+  default `data/cache/query_cache.duckdb`), retrieval is **cache-first**: it looks in DuckDB before
+  every call and only touches the PubMed or Europe PMC API on a miss, writing the result back so the
+  next paper that needs it is served from disk. Two things are cached, so a study seen once is
+  neither searched nor fetched again: a `query_results` table maps `(source, query, page_size)` to
+  its hits, and a `records` table maps a study id to its fetched title/abstract/publication types.
+  A distinct query and a distinct study each hit the network only once for the whole corpus. The
+  cache is thread-safe (the filter and harness fan papers out across threads) and fails open: if the
+  file cannot be opened, retrieval just runs live instead of aborting. Leaving the variable unset
+  preserves live-every-time behaviour. This is separate from the validation tool's own DuckDB store
+  (`store.py`), which caches candidates, embeddings, and stance for repeatable offline
+  `medfact-run --use-cache` scoring.
 
 ### 💵 What it costs
 
 The expense is dominated by network calls (PubMed/Europe PMC search and fetch) and LLM calls
 (one extraction per paper, plus one stance judgement per candidate study per claim). Papers run
-concurrently (`MEDFACT_FILTER_CONCURRENCY`, default 4). The whole pipeline also runs offline on
-stub backends with no network and no LLM, for checking the plumbing before spending anything.
+concurrently (`MEDFACT_FILTER_CONCURRENCY`, default 4), and `MEDFACT_QUERY_CACHE` (see
+[Retrieval engine](#-retrieval-engine)) collapses repeated searches across a large corpus. The
+whole pipeline also runs offline on stub backends with no network and no LLM, for checking the
+plumbing before spending anything.
 
 > **Status: proof of concept, not a finished tool.** It was tested on a small batch of 10 PubMed
-> papers using Gemini 2.5 Flash Lite. It has **not** been run on a large or varied dataset, and
-> query construction, retrieval, and scoring all need further refinement before production use.
+> papers using Gemini 2.5 Flash Lite: 6 papers kept, 4 downweighted, 0 dropped
+> (`reports/filter.csv`), with all 10 receiving a real verdict (no fall-back to `unverified`).
+> It has **not** been run on a large or varied dataset, and query construction, retrieval, and
+> scoring all need further refinement before production use.
 
 ## 🤔 Doesn't this exist already?
 
 Two simpler ideas sound like they would do the same job. Neither does.
 
 **Why not trust well-cited sources?** Reputation (citation count, H-index, journal prestige)
-judges who is speaking, not whether what they say is true. The hormone-replacement-therapy belief
-was highly cited the entire time it was wrong, and reputation has the same blind spot as fame
-generally; well-known work is easy to check, obscure-but-correct work is not.
+judges who is speaking, not whether what they say is true. The belief that hormone replacement
+therapy prevents coronary heart disease in healthy postmenopausal women was highly cited the
+entire time it was wrong: it rested on observational data, and stayed mainstream until the 2002
+Women's Health Initiative randomized trial found the opposite, an increased risk of coronary
+heart disease. Reputation has the same blind spot as fame generally; well-known work is easy to
+check, obscure-but-correct work is not.
 
 **Why not just count refuted claims?** That assumes the hard part, finding the study that refutes
 each claim and confirming it does, is already done. This POC tests that step rather than taking
@@ -167,6 +208,21 @@ A failed claim is also tagged with why, so a miss traces to a root cause:
 Results print at the end of the run and save to a markdown report
 (`reports/recall-<timestamp>.md`) plus a per-claim CSV (`reports/recall-<timestamp>.csv`). These
 validate the search only, separate from the filter's own per-paper table (`reports/filter.csv`).
+
+> **Status: real measurement, retrieval still has two known gaps.** A real run
+> (`pritamdeka/S-PubMedBert-MS-MARCO` embeddings, Gemini 2.5 Flash Lite stance) against the
+> 10-reversal/8-control gold slice scored **80% retrieval recall** and a **25%
+> false-contradiction rate** (`reports/recall-20260621-194531.md`). When the disproving study
+> reaches the pool the model recognises it as refuting every time (stance recall is 100%
+> conditional on retrieval), so retrieval is the sole remaining bottleneck. The two misses are
+> `not_indexed`: the 1984 Marshall & Warren ulcer paper and the NICE-SUGAR glycaemic-control
+> trial, both of which need MeSH-based queries or alias expansion to surface. An earlier run
+> scored 40% recall and a 62% false-contradiction rate; both numbers improved once query
+> construction stopped forcing exact-phrase matches and switched to a small loose-to-targeted
+> query ladder (`transformation/query.py`); retrieval recall held at 80% after the ladder was
+> trimmed to its three highest-yield rungs. Retrieval recall is deterministic; the
+> false-contradiction rate varies run to run (seen between 12% and 25%) because the stance judge
+> is mildly non-deterministic on one or two borderline controls.
 
 ## ⚙️ Setup
 

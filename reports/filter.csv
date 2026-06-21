@@ -1,13 +1,11 @@
 pmid,title,verdict,score,action,n_claims,n_refuted_claims,top_refuting_tier,refuting_pmids,notes
-38177157,Pulmonary hypertension.,supported,0.660,keep,5,0,0.00,,
-38469546,Rheumatoid arthritis: pathogenesis and therapeutic advances.,contested,0.212,downweight,5,0,0.40,38153614;41559435,
-38733347,"Alzheimer's disease: insights into pathology, molecular mechanisms, and therapy.",unverified,0.500,keep,0,0,0.00,,"error: HTTPStatusError: Server error '503 Service Temporarily Unavailable' for url 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=Alzheimer%27s+disease+%28AD%29+is+characterized+by+the+accumulation+of+amyloid+plaques+and+neurofibrillary+tangles+in+the+brain.+AND+accumulation+of+amyloid+plaques+and+neurofibrillary+tangles&format=json&pageSize=20&resultType=core'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
-38777539,Hereditary Breast Cancer: BRCA Mutations and Beyond.,unverified,0.500,keep,0,0,0.00,,"error: HTTPStatusError: Server error '503 Service Temporarily Unavailable' for url 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=pathogenic+and+likely+pathogenic+genetic+mutations+AND+hereditary+breast+cancers&format=json&pageSize=20&resultType=core'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
-38928291,Kidney Aging and Chronic Kidney Disease.,supported,0.660,keep,5,0,0.00,,
+38177157,Pulmonary hypertension.,supported,0.500,keep,5,0,0.00,,
+38469546,Rheumatoid arthritis: pathogenesis and therapeutic advances.,contested,0.148,downweight,5,0,0.80,22584017;29600949;37591216;38003865;39436446;39757285,
+38733347,"Alzheimer's disease: insights into pathology, molecular mechanisms, and therapy.",supported,0.660,keep,5,0,0.00,,
+38777539,Hereditary Breast Cancer: BRCA Mutations and Beyond.,contested,0.552,downweight,4,0,0.40,29368626;29566657,
+38928291,Kidney Aging and Chronic Kidney Disease.,contested,0.372,downweight,5,0,0.40,24824884;32921320,
 39051318,Global Initiative for Asthma Guidelines 2024: An Update.,supported,0.660,keep,5,0,0.00,,
-39084811,Diagnosis and Treatment of Hyperglycemia in Pregnancy: Type 2 Diabetes Mellitus and Gestational Diabetes.,supported,0.628,keep,2,0,0.00,,
-39185405,Inflammation mechanism and research progress of COPD.,supported,0.500,keep,5,0,0.00,,
-39496213,Contemporary Management of Acute Ischemic Stroke.,contested,0.148,downweight,5,0,0.80,40970508;41614492,
-39501335,From inflammation to depression: key biomarkers for IBD-related major depressive disorder.,supported,0.660,keep,5,0,0.00,,
+39084811,Diagnosis and Treatment of Hyperglycemia in Pregnancy: Type 2 Diabetes Mellitus and Gestational Diabetes.,supported,0.660,keep,3,0,0.00,,
+39185405,Inflammation mechanism and research progress of COPD.,supported,0.500,keep,4,0,0.00,,
+39496213,Contemporary Management of Acute Ischemic Stroke.,contested,0.148,downweight,5,0,0.80,34035152;41614492;41625980,
+39501335,From inflammation to depression: key biomarkers for IBD-related major depressive disorder.,supported,0.644,keep,5,0,0.00,,

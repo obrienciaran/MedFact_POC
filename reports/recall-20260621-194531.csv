@@ -1,0 +1,19 @@
+claim_id,claim_text,status,n_candidates,answer_key_retrieved,answer_key_rank,answer_key_recognized,refuting_found,top_refuting_tier,failure_bucket,false_contradiction
+hrt-chd,Hormone replacement therapy prevents coronary heart disease in healthy postmenopausal women.,reversed,95,True,9,True,True,0.90,none,False
+cast-antiarrhythmics,Encainide and flecainide reduce mortality after myocardial infarction by suppressing ventricular arrhythmias.,reversed,108,True,2,True,True,0.85,none,False
+ulcer-stress-not-infection,"Peptic ulcers are caused by stress and excess gastric acid, not by bacterial infection.",reversed,133,False,,False,True,0.40,not_indexed,False
+hcq-covid-hospitalized,Hydroxychloroquine reduces mortality in hospitalized COVID-19 patients.,reversed,121,True,3,True,True,0.90,none,False
+betacarotene-lung-cancer,Beta-carotene supplementation prevents lung cancer.,reversed,109,True,12,True,True,0.90,none,False
+vitamin-e-cv,Vitamin E supplementation reduces cardiovascular events.,reversed,5,True,3,True,True,0.90,none,False
+rofecoxib-cv-safe,Rofecoxib (Vioxx) is a cardiovascularly safe anti-inflammatory.,reversed,40,True,23,True,True,0.85,none,False
+tight-glycemic-icu,Tight (intensive) glucose control reduces mortality in critically ill patients.,reversed,127,False,,False,True,0.90,not_indexed,False
+estrogen-dementia,Estrogen plus progestin therapy reduces the risk of dementia in postmenopausal women.,reversed,81,True,8,True,True,0.90,none,False
+antioxidants-mortality,Antioxidant supplements reduce all-cause mortality.,reversed,113,True,3,True,True,0.90,none,False
+ctrl-statins-cv,Statins reduce cardiovascular mortality in patients at elevated cardiovascular risk.,still_true,126,False,,False,True,0.90,none,True
+ctrl-smoking-lung-cancer,Cigarette smoking causes lung cancer.,still_true,135,False,,False,False,0.00,none,False
+ctrl-ace-hf,ACE inhibitors reduce mortality in patients with heart failure with reduced ejection fraction.,still_true,130,False,,False,False,0.00,none,False
+ctrl-folate-ntd,Periconceptional folic acid supplementation reduces neural tube defects.,still_true,113,False,,False,False,0.00,none,False
+ctrl-aspirin-secondary,Aspirin reduces recurrent vascular events in secondary prevention after myocardial infarction.,still_true,103,False,,False,True,0.50,none,True
+ctrl-hpylori-eradication,Eradicating Helicobacter pylori heals peptic ulcers and reduces recurrence.,still_true,121,False,,False,False,0.00,none,False
+ctrl-antihypertensive-stroke,Antihypertensive therapy reduces stroke risk in patients with hypertension.,still_true,139,False,,False,False,0.00,none,False
+ctrl-insulin-t1dm,Insulin therapy is required to treat type 1 diabetes mellitus.,still_true,128,False,,False,False,0.00,none,False

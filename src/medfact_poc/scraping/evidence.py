@@ -80,7 +80,13 @@ class LiveRetriever:
                 c.retrieved_by = sorted(set(c.retrieved_by) | {"links"})
                 priority[c.ext_id] = c
             for source in get_sources():
-                for c in source.search_claim(claim.normalized, limit=limit, client=client):
+                try:
+                    found = source.search_claim(claim.normalized, limit=limit, client=client)
+                except Exception as exc:  # noqa: BLE001 - one source's outage must not unverify the paper
+                    print(f"WARN: {source.name} failed for {paper.pmid}, using other sources. "
+                        f"{type(exc).__name__}: {exc}")
+                    continue
+                for c in found:
                     if c.ext_id not in priority:
                         others.setdefault(c.ext_id, c)
             for c in efetch(other_dispute_pmids, client=client):
