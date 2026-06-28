@@ -2,6 +2,8 @@
 
 ## What this is
 
+EXPERIMENTAL
+
 A proof of concept for an evidence-based data quality filter for medical training data. Point it
 at a corpus of PubMed papers (XML) and it produces a flat table, one row per paper, judging
 whether each paper's claims hold up against trusted medical evidence. Downstream training can then
