@@ -67,23 +67,19 @@ For each paper:
 2. Extract claims: an LLM lifts the paper's specific claims out of its text.
 3. Retrieve evidence: for each claim, fetch candidate studies that bear on it.
 4. Judge stance: an LLM labels each candidate supporting, refuting, or neutral toward the claim.
-5. Score: combine those labels with each study's evidence tier into a per-claim verdict. All
-   claims are scored, but the paper's final verdict and score are driven by the single most
-   damning claim.
+5. Score: combine those labels with each study's evidence tier into a per-claim verdict. Every
+   claim is scored, but the paper's verdict and score come from its single most damning claim.
 
-   The verdict category and the score are two separate outputs and should not be confused with
-   each other.
+   The verdict and the score are two separate outputs.
 
-   The verdict (`refuted` > `contested` > `supported`) is a category determined by verdict
-   severity alone: a paper with nine supported claims and one refuted claim is categorised as
-   `refuted`.
+   The verdict (`refuted` > `contested` > `supported`) is a category set by severity alone. A
+   paper with nine supported claims and one refuted claim is `refuted`.
 
-   The score (0.0 to 1.0) is a separate continuous measure of how strongly that verdict is
-   supported by the evidence. It is computed from two inputs: the evidence tier of the refuting
-   study (e.g. an RCT scores higher than a case report) and the stance judge's confidence, which
-   is a 0.0 to 1.0 value the LLM self-reports alongside its label as its own assessment of how
-   certain it is of that label. Neither of those inputs is the score itself. A weakly refuted claim and a strongly
-   refuted claim both produce a `refuted` verdict, but their scores will differ.
+   The score (0.0 to 1.0) measures how strongly the evidence backs that verdict. It comes from
+   two inputs: the evidence tier of the refuting study (an RCT scores higher than a case report)
+   and the stance judge's confidence (a 0.0 to 1.0 value the LLM reports with its label, saying
+   how sure it is). A weakly refuted and a strongly refuted claim get the same `refuted` verdict
+   but different scores.
 
 The LLM handles only extraction and stance. It does not run the search, score papers, or decide
 what is kept. The pipeline also runs offline on stub backends so you can check the plumbing
